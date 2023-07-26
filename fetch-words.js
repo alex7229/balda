@@ -35,15 +35,16 @@ const parsePage = (html) => {
 };
 
 const processWords = async () => {
-  let words = ["alex", "some"];
+  let words = [];
   for (let i = 192; i <= 223; i++) {
     let pageName = "http://rus-yaz.niv.ru/doc/dictionary/noun/index.htm";
-    if (pageName > 192) {
-      pageName = `http://rus-yaz.niv.ru/doc/dictionary/noun/index-${i}.htm`;
+    if (i > 192) {
+      pageName = `http://rus-yaz.niv.ru/doc/dictionary/noun/index-${i}.htm#${i}`;
     }
     const page = await fetchPage(pageName);
-    words = words.concat(parsePage(page));
-    await wait(2600);
+    const newWords = parsePage(page);
+    words = [...words, ...newWords];
+    await wait(1000);
   }
   fs.writeFileSync("./words.json", JSON.stringify(words), {
     encoding: "utf-8",
