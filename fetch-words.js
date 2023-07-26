@@ -1,8 +1,14 @@
 const parser = require("node-html-parser");
 const parse = parser.parse;
+const fs = require("fs");
 
-const firstPageURL =
-  "http://rus-yaz.niv.ru/doc/dictionary/noun/fc/slovar-192-1.htm";
+const wait = async (ms) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(true);
+    }, ms);
+  });
+};
 
 const fetchPage = async (url) => {
   const pageResponse = await fetch(url);
@@ -14,25 +20,34 @@ const fetchPage = async (url) => {
 
 const parsePage = (html) => {
   const root = parse(html);
-  const headings = root.querySelectorAll("h2.slovar");
-  const paragraphs = root.querySelectorAll("h2.slovar ~ p");
-
-  const words = [];
-
-  for (let i = 0; i < 10; i++) {
-    const heading = headings[i];
-    const detailedText = paragraphs[i];
-    words.push({
-      heading: heading.innerHTML,
-      description: detailedText.innerText,
+  const links = root.querySelectorAll("a");
+  return Array.from(links)
+    .filter((link) => {
+      if (link.attributes && link.attributes.href) {
+        const href = link.attributes.href;
+        return href.match(/#zag-\d+/);
+      }
+      return false;
+    })
+    .map((link) => {
+      return link.innerText.toLowerCase();
     });
+};
+
+const processWords = async () => {
+  let words = ["alex", "some"];
+  for (let i = 192; i <= 223; i++) {
+    let pageName = "http://rus-yaz.niv.ru/doc/dictionary/noun/index.htm";
+    if (pageName > 192) {
+      pageName = `http://rus-yaz.niv.ru/doc/dictionary/noun/index-${i}.htm`;
+    }
+    const page = await fetchPage(pageName);
+    words = words.concat(parsePage(page));
+    await wait(2600);
   }
-  console.log(words[6]);
+  fs.writeFileSync("./words.json", JSON.stringify(words), {
+    encoding: "utf-8",
+  });
 };
 
-const showResult = async () => {
-  const firstPage = await fetchPage(firstPageURL);
-  parsePage(firstPage);
-};
-
-showResult();
+processWords();
